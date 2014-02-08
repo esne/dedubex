@@ -103,9 +103,9 @@ public class KM {
 	
 	public static void rolling_window(byte[] t,int startPos,Set<Integer> hashset,Set<String> hashsetFULL,PrintWriter out) throws NoSuchAlgorithmException{
  
-		int n = WSIZE; 
-		RabinKarpHash ch = new RabinKarpHash(n);
-		RabinKarpHash ch1 = new RabinKarpHash(n);
+		//int n = WSIZE; 
+		RabinKarpHash ch = new RabinKarpHash(WSIZE);
+		RabinKarpHash ch1 = new RabinKarpHash(WSIZE);
 
 
 		 /*
@@ -119,36 +119,13 @@ public class KM {
 		 int winStartPos=0;
 	     int winEndPos=0;
 	     int chunkStartPosFingerprint=0;
+	     String chunkHash="";
 		 // INITIAL FINGERPRINT   FILL ROLLING WINDOW
-	     /*
-	     for(; j<n;++j) {
 
-				rollinghash=ch1.eat2(t[j]);
-				winEndPos=j;
 				
-			}	
-			chunkStartPosFingerprint=rollinghash;
-			
-			if (hashset.contains(rollinghash)){
-		    	byte[] chunk = Arrays.copyOfRange(t, chunkStartPos, chunkEndPos);
-		    	String chunkHash=md5Hash(chunk);
-		    	if(hashsetFULL.contains(rollinghash+":"+chunkHash)){			    	
-			    		System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
-		    	}
-			}	
-		
-*/
-				
-				
-		// ROLLING WINDOW
-		
-	//	for(; k<n-1;++k) {
-	//		rollinghash=ch.eat2(t[k]);
-	//	}
-	//    rollinghash = ch.eat2(t[k]); // the first or last 32-(n-1) bits are
 
-
-	    for(; k<n-1;++k) {
+/*
+	    for(; k<WSIZE-1;++k) {
 			rollinghash=ch.eat2(t[k]);	
 		}	
 
@@ -164,7 +141,7 @@ public class KM {
 	    	}
 		}
 		
-		
+	*/	
 		
 		
 	/*    
@@ -184,35 +161,68 @@ public class KM {
 	    }
 	    
 	  */  
+	     boolean jump=false;
 	    long st1 = System.nanoTime(); // start time
 	    int hops=0;
 		for(;k<t.length-1;++k) {
-			
-			rollinghash=ch.eat2(t[k]);
-			
-			
-			
-			
-			
-			winStartPos=k+1-n;
-			winEndPos=k+1;
-			rollinghash = ch.update2(t[winStartPos],t[winEndPos]);	
-			//                           ^^^^^^^       ^^^^^^^^
-			//							  drop char    add char
+			if(jump){
+				System.out.println("k after jump:"+k);
+				jump=false;
+			}
+			winEndPos=k;
+			if(winEndPos-winStartPos<WSIZE) {
+				winStartPos=chunkStartPos;
+				rollinghash=ch.eat2(t[k]);
+				//start=0 end=47
+				if((winEndPos-winStartPos)==47){
+					System.out.println("initialized hash:"+rollinghash);
+					}
+				continue;
+			}
+			//start=1 end=48
+			if(winStartPos==chunkStartPos){
+				chunkStartPosFingerprint=rollinghash;	
+				if (hashset.contains(rollinghash)){
+					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
+					chunkHash=md5Hash(chunk);
+
+					
+					if(hashsetFULL.contains(chunkStartPosFingerprint+":"+chunkHash+":"+CHUNK_SIZE)){
+						System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
+						System.out.println("k first value:"+k);
+						rollinghash=0;
+						k=chunkEndPos;
+						chunkStartPos=chunkEndPos+1;
+						chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+						winStartPos=chunkStartPos;
+						winEndPos=winStartPos;
+						jump=true;
+						System.out.println("k before jump:"+k);
+						continue;
+						
+					}
+				}	
+			}
+		/*	
+			if(winStartPos==chunkEndPos+1){
+				byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
+				chunkHash=md5Hash(chunk);
+				//out.println(chunkStartPosFingerprint+":"+chunkHash+":"+winStartPos+":"+winEndPos+":"+chunkStartPos+":"+chunkEndPos+":"+(chunkEndPos-chunkStartPos+1));
+				out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+				chunkStartPos=winStartPos;
+				chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+				chunkStartPosFingerprint=rollinghash;
+			}
+		*/
+	
+			winStartPos=k+1-WSIZE;
+			rollinghash = ch.update2(t[winStartPos],t[winEndPos+1]);
 
 			
-				if (hashset.contains(rollinghash)){
-				//System.out.println("jump");
-				//rolling_window(t, k+CHUNK_SIZE, hashset, hashsetFULL, out);
-				//byte[] chunk = Arrays.copyOfRange(t, k, k+CHUNK_SIZE);							
-			    //	String chunkHash=md5Hash(chunk);
-			    //	if(hashsetFULL.contains(rollinghash+":"+chunkHash)){
-			    		/////System.out.println("jump");
-			    		//rolling_window(t, startPos+n, hashset, hashsetFULL, out);
-			    //	}
-			    	
-				}	
-			
+
+				
+
+				
 			//rollinghash = ch.update2(t[k+1-n], t[k+1]);	
 			/*						 ^^^^^^^^  ^^^^^^
 			 * 						  out        in	
