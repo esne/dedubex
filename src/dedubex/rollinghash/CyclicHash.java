@@ -27,7 +27,11 @@ public class CyclicHash {
 	hashvalue ^= hasher.hashvalues[c];
 	return hashvalue;
 	}
-
+	    public int eat2(byte c) {
+	hashvalue = fastleftshift1(hashvalue);
+	hashvalue ^= hasher.hashvalues[c];
+	return hashvalue;
+	}
 	// remove old character and add new one
 	// to get a strongly universal hash value, you have to ignore the last or first (n-1) bits.
 	public int update(char outchar, char inchar) {
@@ -35,7 +39,11 @@ public class CyclicHash {
 	hashvalue = fastleftshift1(hashvalue) ^ z ^ hasher.hashvalues[inchar];
 	return hashvalue;
 	}
-
+	public int update2(byte outchar, byte inchar) {
+	int z = fastleftshiftn(hasher.hashvalues[outchar]);
+	hashvalue = fastleftshift1(hashvalue) ^ z ^ hasher.hashvalues[inchar];
+	return hashvalue;
+	}
 	// this is purely for testing purposes
 	public static int nonRollingHash(CharSequence s) {
 	int value = 0;

@@ -31,7 +31,8 @@ public class KM {
 
 	
 
-	public final static int CHUNK_SIZE=64*1024;
+	//public final static int CHUNK_SIZE=64*1024;
+	public final static int CHUNK_SIZE=100;
 	public final static int WSIZE=48;
 	
 	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
@@ -58,8 +59,10 @@ public class KM {
 			@SuppressWarnings("deprecation")
 			String line = dis.readLine();
 			String[] parts = line.split(":");
-			hashset.add(Integer.parseInt(parts[0]));
-			hashsetFULL.add(line);
+			if(!parts[0].isEmpty()){
+				hashset.add(Integer.parseInt(parts[0]));
+				hashsetFULL.add(line);
+			}
 		}
 		fis.close();
 		bis.close();
@@ -120,6 +123,8 @@ public class KM {
 	     int winEndPos=0;
 	     int chunkStartPosFingerprint=0;
 	     String chunkHash="";
+	     
+	     boolean setRolling=false;
 		 // INITIAL FINGERPRINT   FILL ROLLING WINDOW
 
 				
@@ -167,26 +172,30 @@ public class KM {
 		for(;k<t.length-1;++k) {
 			if(jump){
 				System.out.println("k after jump:"+k);
+				ch=null;
+				//ch=new RabinKarpHash(WSIZE);
 				jump=false;
 			}
 			winEndPos=k;
 			if(winEndPos-winStartPos<WSIZE) {
 				winStartPos=chunkStartPos;
 				rollinghash=ch.eat2(t[k]);
+				
 				//start=0 end=47
 				if((winEndPos-winStartPos)==47){
 					System.out.println("initialized hash:"+rollinghash);
+					System.out.println("Content after initialiaz:"+ new String(Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1)));
 					}
 				continue;
 			}
 			//start=1 end=48
+		/*
 			if(winStartPos==chunkStartPos){
+				System.out.println("winStartPos==chunkStartPos");
 				chunkStartPosFingerprint=rollinghash;	
 				if (hashset.contains(rollinghash)){
-					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
-					chunkHash=md5Hash(chunk);
-
-					
+					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
+					chunkHash=md5Hash(chunk);					
 					if(hashsetFULL.contains(chunkStartPosFingerprint+":"+chunkHash+":"+CHUNK_SIZE)){
 						System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
 						System.out.println("k first value:"+k);
@@ -203,20 +212,45 @@ public class KM {
 					}
 				}	
 			}
-		/*	
-			if(winStartPos==chunkEndPos+1){
-				byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
-				chunkHash=md5Hash(chunk);
-				//out.println(chunkStartPosFingerprint+":"+chunkHash+":"+winStartPos+":"+winEndPos+":"+chunkStartPos+":"+chunkEndPos+":"+(chunkEndPos-chunkStartPos+1));
-				out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
-				chunkStartPos=winStartPos;
-				chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+			
+	*/	
+			byte[] chunk = Arrays.copyOfRange(t, winStartPos,winStartPos+48);
+			System.out.println("hash:"+rollinghash+" content:"+new String(chunk));
+			/*
+			if(winStartPos == chunkStartPos ){	
 				chunkStartPosFingerprint=rollinghash;
+				byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
+				chunkHash=md5Hash(chunk);	
+				System.out.println("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
+				out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+				
+				
+				winStartPos=k+1-WSIZE;
+				rollinghash = ch.update2(t[winStartPos],t[winEndPos+1]);
+				
+			}else{
+				
+				if(winStartPos == chunkEndPos){
+					
+					chunkStartPos=chunkEndPos+1;					
+					chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+				}
+				
+				winStartPos=k+1-WSIZE;
+				rollinghash = ch.update2(t[winStartPos],t[winEndPos+1]);
+				chunkStartPosFingerprint=rollinghash;
+				
 			}
-		*/
-	
+*/
+			
 			winStartPos=k+1-WSIZE;
 			rollinghash = ch.update2(t[winStartPos],t[winEndPos+1]);
+	
+	
+
+			
+	
+
 
 			
 

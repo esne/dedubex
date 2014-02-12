@@ -18,7 +18,8 @@ public class RabinKarpHash {
 		return hashvalue;
 	}
 	public int eat2(byte c) {
-		int t=c & 0xff;
+		//int t=c & 0xff;
+		int t=c;
 		hashvalue = B*hashvalue + hasher.hashvalues[t];
 		//hashvalue = B*hashvalue + hasher.hashvalues[c];
 		return hashvalue;
@@ -31,8 +32,10 @@ public class RabinKarpHash {
 		return hashvalue;
 	}
 	public int update2(byte outchar, byte inchar) {
-		int ti=inchar & 0xff;
-		int to=outchar & 0xff;
+		//int ti=inchar & 0xff;
+		//int to=outchar & 0xff;
+		int ti = inchar;
+		int to = outchar;
 		hashvalue = B*hashvalue +hasher.hashvalues[ti] - BtoN * hasher.hashvalues[to];
 		//hashvalue = B*hashvalue +hasher.hashvalues[inchar] - BtoN * hasher.hashvalues[outchar];
 		return hashvalue;
