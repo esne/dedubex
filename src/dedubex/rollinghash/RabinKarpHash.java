@@ -18,8 +18,9 @@ public class RabinKarpHash {
 		return hashvalue;
 	}
 	public int eat2(byte c) {
-		//int t=c & 0xff;
-		int t=c;
+		int t=c & 0xff;
+		//int t=c;
+		//System.out.println("add byte:"+t);
 		hashvalue = B*hashvalue + hasher.hashvalues[t];
 		//hashvalue = B*hashvalue + hasher.hashvalues[c];
 		return hashvalue;
@@ -32,10 +33,11 @@ public class RabinKarpHash {
 		return hashvalue;
 	}
 	public int update2(byte outchar, byte inchar) {
-		//int ti=inchar & 0xff;
-		//int to=outchar & 0xff;
-		int ti = inchar;
-		int to = outchar;
+		int ti=inchar & 0xff;
+		int to=outchar & 0xff;
+		//int ti = inchar;
+		//int to = outchar;
+		//System.out.println("outchar:"+to+" inchar:"+ti);
 		hashvalue = B*hashvalue +hasher.hashvalues[ti] - BtoN * hasher.hashvalues[to];
 		//hashvalue = B*hashvalue +hasher.hashvalues[inchar] - BtoN * hasher.hashvalues[outchar];
 		return hashvalue;
@@ -50,10 +52,21 @@ public class RabinKarpHash {
 		}
 		return value;
 	}
+	public static int nonRollingHash2(byte[] s) {
+		int value = 0;
+		for(int i = 0; i<s.length;++i) {
+			byte c = (byte)s[i];
+			if(c<0){ c=(byte) (c & 0xff);}
+			int z = hasher.hashvalues[c];
+			value = B*value + z;
+		}
+		return value;
+	}
 	public int hashvalue;
 	int n;
 	int BtoN;
 	static CharacterHash hasher = CharacterHash.getInstance();
-	final static int B = 31;
+	final static int B = 257;
+	//final static int B = 31;
 
 }
