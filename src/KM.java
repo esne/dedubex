@@ -15,22 +15,22 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 
 import dedubex.rollinghash.*;
 
 
 public class KM {
-
-	/**
-	 * @param args
-	 */
-
-	
-
 	//public final static int CHUNK_SIZE=64*1024;
 	public final static int CHUNK_SIZE=15;
 	public final static int WSIZE=9;
@@ -51,9 +51,12 @@ public class KM {
 		fis = new FileInputStream(file);		 
 		bis = new BufferedInputStream(fis);
 		dis = new DataInputStream(bis);
-
+		
 		Set<Integer> hashset = new HashSet<Integer>();
 		Set<String> hashsetFULL = new HashSet<String>();
+		//Map <Integer,ChunkHash> hm = new HashMap<Integer,ChunkHash>();
+		HashMap<Integer, HashMap<String, Integer>> hm = new HashMap<Integer, HashMap<String, Integer>>();
+
 		System.out.println("initializing hashmap for fasth search");
 		while (dis.available() != 0) {
 			@SuppressWarnings("deprecation")
@@ -62,8 +65,34 @@ public class KM {
 			if(!parts[0].isEmpty()){
 				hashset.add(Integer.parseInt(parts[0]));
 				hashsetFULL.add(line);
+				//hm.put(Integer.parseInt(parts[0]), new ChunkHash(parts[1], Integer.parseInt(parts[2])));
+				if (!hm.containsKey(Integer.parseInt(parts[0]))) {
+			    	hm.put(Integer.parseInt(parts[0]), new HashMap<String, Integer>());
+					}
+					hm.get(Integer.parseInt(parts[0])).put(parts[1], Integer.parseInt(parts[2]));
+				
+				
 			}
 		}
+	/*
+	 * 
+	 * HashMap<String, HashMap<String, String>> myArray = new HashMap<String, HashMap<String, String>>();
+
+		if (!myArray.containsKey("en")) {
+    	myArray.put("en", new HashMap<String, String>());
+		}
+		myArray.get("en").put("name", "english name");
+	
+	 */
+		
+		
+		
+        
+
+      //12312:aaaaaaaaaaaaaaaa:32
+		 //  System.out.println("get info:"+hm.get(12312).get("aaaaaaaaaaaaaaaa"));
+		
+		
 		fis.close();
 		bis.close();
 		dis.close();
@@ -86,7 +115,7 @@ public class KM {
 		byte[] t = new byte[(int)f.length()];
 		 f.readFully(t, 0, (int)f.length());
 				
-		rolling_window(t,0,hashset,hashsetFULL,out);
+		rolling_window(t,0,hashset,hashsetFULL,out,hm);
 		
 
 		
@@ -98,9 +127,9 @@ public class KM {
 
 	}
 	
-	public static void rolling_window(byte[] t,int startPos,Set<Integer> hashset,Set<String> hashsetFULL,PrintWriter out) throws NoSuchAlgorithmException{
+	public static void rolling_window(byte[] t,int startPos,Set<Integer> hashset,Set<String> hashsetFULL,PrintWriter out, HashMap<Integer, HashMap<String, Integer>> hsdb) throws NoSuchAlgorithmException{
  
-		//int n = WSIZE; 
+
 		RabinKarpHash ch = new RabinKarpHash(WSIZE);
 		RabinKarpHash ch1 = new RabinKarpHash(WSIZE);
 
@@ -108,8 +137,8 @@ public class KM {
 		 /*
 		  * Read first n bytes from file and to get first fingerprint
 		  */
-		 int k = startPos;
-		 int j = 0;
+		 int k = startPos;								//start position
+		 int j = 0;										
 		 int rollinghash=0;
 		 int chunkStartPos=startPos;
 		 int chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
@@ -123,49 +152,13 @@ public class KM {
 
 				
 
-/*
-	    for(; k<WSIZE-1;++k) {
-			rollinghash=ch.eat2(t[k]);	
-		}	
 
-	    rollinghash = ch.eat2(t[k]);
-	    winEndPos=k;
-		chunkStartPosFingerprint=rollinghash;
-		
-		if (hashset.contains(rollinghash)){
-	    	byte[] chunk = Arrays.copyOfRange(t, chunkStartPos, chunkEndPos);
-	    	String chunkHash=md5Hash(chunk);
-	    	if(hashsetFULL.contains(rollinghash+":"+chunkHash)){			    	
-		    		System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
-	    	}
-		}
-		
-	*/	
-		
-		
-	   
-	    //Write fist data
-	     /*
-	    if(boundPos==0){
-	    	int chunkFingerprint = rollinghash;
-	    	byte[] chunk = Arrays.copyOfRange(t, boundPos, boundPos+CHUNK_SIZE);
-	    	String chunkHash=md5Hash(chunk);
-	    	
-	    	if (!hashset.contains(rollinghash)){
-	    		out.println(chunkFingerprint+":"+chunkHash);
-			}else if(!hashsetFULL.contains(chunkFingerprint+":"+chunkHash)){
-				out.println(chunkFingerprint+":"+chunkHash);
-			}else{
-					//exist
-			}	
-	    }
-	  */  
 	   
 	     boolean jump=false;
 	     boolean init=false;
-	    long st1 = System.nanoTime(); // start time
-	    int hops=0;
-		for(;k<t.length+1;++k) {
+	     long st1 = System.nanoTime(); // start time
+	     int hops=0;
+		 for(;k<t.length+1;++k) {
 			if(jump){
 				System.out.println("k after jump:"+k);
 				ch=null;
@@ -174,12 +167,8 @@ public class KM {
 			}
 			winEndPos=k;
 			if(winEndPos-winStartPos<WSIZE) {
-				winStartPos=chunkStartPos;
-				//System.out.println("k:"+k);
-				
+				winStartPos=chunkStartPos;		
 				rollinghash=ch.eat2(t[k]);
-				
-				//start=0 end=47
 				if((winEndPos-winStartPos)==WSIZE-1){
 					System.out.println("initialized hash:"+rollinghash);
 					init=true;
@@ -188,72 +177,93 @@ public class KM {
 				continue;
 			}
 
-		
-			if(winStartPos==chunkStartPos){
-				System.out.println("winStartPos==chunkStartPos");
-				chunkStartPosFingerprint=rollinghash;	
-				if (hashset.contains(rollinghash)){
-					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
-					chunkHash=md5Hash(chunk);					
-					if(hashsetFULL.contains(chunkStartPosFingerprint+":"+chunkHash+":"+CHUNK_SIZE)){
-						System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
-						System.out.println("k first value:"+k);
-						rollinghash=0;
-						k=chunkEndPos;
-						chunkStartPos=chunkEndPos+1;
-						chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
-						winStartPos=chunkStartPos;
-						winEndPos=winStartPos;
-						jump=true;
-						System.out.println("k before jump:"+k);
-						continue;
-						
-					}
-				}	
-			}
-			
-		
+			if (hashset.contains(rollinghash)){
+				
+				//load hashes
+				HashMap<String,Integer> hmcheck=hsdb.get(rollinghash);
+ 
+			          for (Iterator it2 = hmcheck.entrySet().iterator(); it2.hasNext();) {  
+			              Map.Entry entry2 = (Map.Entry) it2.next();  
+			              Object key2 = entry2.getKey();
+			              Object value2 = entry2.getValue();
+			        	  System.out.println("Iterator2a: key:"+key2+" value2:"+value2);
+			          }
 
-			//System.out.println("hash:"+rollinghash+" content:"+new String(chunk)+ " winStartPos:"+winStartPos+" winEndPos:"+winEndPos);
-	
-			
-			/*	
-			if(winStartPos == chunkStartPos ){	
-				chunkStartPosFingerprint=rollinghash;
-				byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos);
-				chunkHash=md5Hash(chunk);	
-				System.out.println("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
-				out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+			        
+			      
+			      
+			      
+			      
 				
 				
-				//winStartPos=k+1-WSIZE;
-				//rollinghash = ch.update2(t[winStartPos],t[winEndPos]);
+				
+				// we have hash
+				if(winStartPos==chunkStartPos){
+					System.out.println("winStartPos==chunkStartPos");
+					chunkStartPosFingerprint=rollinghash;	
+					
+						byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
+						chunkHash=md5Hash(chunk);	
+						
+						if(hashsetFULL.contains(chunkStartPosFingerprint+":"+chunkHash+":"+CHUNK_SIZE)){
+							System.out.println("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
+							System.out.println("k first value:"+k);
+							rollinghash=0;
+							k=chunkEndPos;
+							chunkStartPos=chunkEndPos+1;
+							chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+							winStartPos=chunkStartPos;
+							winEndPos=winStartPos;
+							jump=true;
+							System.out.println("k before jump:"+k);
+							continue;
+							
+						}
+					}
+				
 				
 			}else{
+				// no rollinghashmatch
+
+				if(winStartPos == chunkStartPos ){	
+					chunkStartPosFingerprint=rollinghash;
+				}
 				
 				if(winStartPos == chunkEndPos){
+					// nebija match pa visu chunku taisam chunkam hashu un saglabâjam kaut kur
+
 					
+					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
+					chunkHash=md5Hash(chunk);					
+					out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+					System.out.println("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
+
 					chunkStartPos=chunkEndPos+1;					
 					chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
 				}
+
+				if(winEndPos==t.length){
+					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winEndPos);
+					chunkHash=md5Hash(chunk);
+					out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(winEndPos-chunkStartPos));
+					System.out.println("Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
+				}
 				
-				//winStartPos=k+1-WSIZE;
-				//rollinghash = ch.update2(t[winStartPos],t[winEndPos]);
-				chunkStartPosFingerprint=rollinghash;
 				
 			}
-
-*/
 			
+			
+			
+			
+		
+
+
+			// Generate rolling window has for next iteration
 			if(k>=t.length)break;
 			winStartPos=k-WSIZE;
-			//System.out.println("winStartPos:"+winStartPos+"byte:"+t[winStartPos]+" winEndPos+1:"+(winEndPos)+" byte:"+t[winEndPos]);
 			rollinghash = ch.update2(t[winStartPos],t[winEndPos]);
 			winStartPos=k-WSIZE+1;
-
-
 		}
-		System.out.println("hops:"+hops);
 		long et1 = System.nanoTime() - st1; // end time
 		System.out.println("Estimated time:"+(float)et1/1000000000);
 		
@@ -279,4 +289,22 @@ public class KM {
 	}
 
 
+}
+
+class ChunkHash{
+	private String chunkHash="";
+	private int chunkSize=0;
+	
+	
+	ChunkHash(String chunkHash,int chunkSize ){
+		this.chunkHash=chunkHash;
+		this.chunkSize=chunkSize;			
+	}
+	
+	public String getChunkHash(){
+		return this.chunkHash;
+	}
+	public int getChunkSize(){
+		return this.chunkSize;
+	}
 }
