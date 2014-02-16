@@ -16,7 +16,7 @@ public class CharacterHash {
 			hashvalues[k] = k;
 			
 		}
-		System.out.println("hasvalues length:"+hashvalues.length);
+		//System.out.println("hasvalues length:"+hashvalues.length);
 	}
 	
 	public static CharacterHash getInstance() {
