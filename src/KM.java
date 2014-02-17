@@ -51,7 +51,8 @@ public class KM {
 		/*
 		 * 
 		 * 			LOAD HASH MAP FROM FILE
-		 * 
+		 *
+		  *  
 		 */
 		
 		while (dis.available() != 0) {
@@ -123,7 +124,6 @@ public class KM {
  
 
 		RabinKarpHash ch = new RabinKarpHash(WSIZE);
-
 
 
 		 /*
@@ -283,7 +283,7 @@ public class KM {
 				}
 				
 				if(winStartPos == chunkEndPos){
-					// nebija match pa visu chunku taisam chunkam hashu un saglabâjam kaut kur
+					// nebija match pa visu chunku taisam chunkam hashu un saglabï¿½jam kaut kur
 
 					
 					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
