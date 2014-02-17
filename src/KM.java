@@ -52,7 +52,7 @@ public class KM {
 		 * 
 		 * 			LOAD HASH MAP FROM FILE
 		 *
-		  *  
+		  *
 		 */
 		
 		while (dis.available() != 0) {
@@ -344,8 +344,7 @@ public class KM {
 	static String  md5Hash(byte[] data) throws NoSuchAlgorithmException{
     	MessageDigest md = MessageDigest.getInstance("MD5");			    	
     	byte[] thedigest = md.digest(data);
-    	String hash= toHex(thedigest);	
-		return hash;
+		return toHex(thedigest);
 		//
 	}
 
@@ -360,20 +359,4 @@ public class KM {
 	}
 }
 
-class ChunkHash{
-	private String chunkHash="";
-	private int chunkSize=0;
-	
-	
-	ChunkHash(String chunkHash,int chunkSize ){
-		this.chunkHash=chunkHash;
-		this.chunkSize=chunkSize;			
-	}
-	
-	public String getChunkHash(){
-		return this.chunkHash;
-	}
-	public int getChunkSize(){
-		return this.chunkSize;
-	}
-}
+
