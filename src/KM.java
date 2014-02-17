@@ -31,7 +31,7 @@ public class KM {
 		/*
 		 * Reading fingerprints into ram
 		 */
-        
+
 
 		File file = new File(db);
 		FileInputStream fis;
@@ -61,15 +61,13 @@ public class KM {
 			String[] parts = line.split(":");
 			if(!parts[0].isEmpty()){
 				hashset.add(Integer.parseInt(parts[0]));
-				//hashsetFULL.add(line);
-				//print("WHOLELINE:"+line);
-				//hm.put(Integer.parseInt(parts[0]), new ChunkHash(parts[1], Integer.parseInt(parts[2])));
 				if (!hm.containsKey(Integer.parseInt(parts[0]))) {
 			    	hm.put(Integer.parseInt(parts[0]), new HashMap<String, Integer>());
 					}
-					int hashSize=Integer.parseInt(parts[2]);
-					
-					if(hm.get(Integer.parseInt(parts[0])).containsKey(parts[1]) ){
+					int hashSize;
+                    hashSize = Integer.parseInt(parts[2]);
+
+                if(hm.get(Integer.parseInt(parts[0])).containsKey(parts[1]) ){
 						
 						
 							if(hm.get(Integer.parseInt(parts[0])).get(parts[1]) != hashSize){
@@ -85,7 +83,7 @@ public class KM {
 			}
 		}
 		
-		
+
 		fis.close();
 		bis.close();
 		dis.close();
@@ -138,7 +136,7 @@ public class KM {
 	     int chunkStartPosFingerprint=0;
 	     String chunkHash;
 	     int chunkSize=0;
-	     
+
 		 // INITIAL FINGERPRINT   FILL ROLLING WINDOW
 
 				
@@ -299,6 +297,7 @@ public class KM {
 					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winEndPos);
 					chunkHash=md5Hash(chunk);
 					out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(winEndPos-chunkStartPos));
+                    
 					////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
 					break;
 				}
@@ -343,6 +342,12 @@ public class KM {
 	private static void print(String txt){
 		System.out.println(txt);
 	}
+    private void addToHashMap(int rollinghash,String hash,int chunkSize, Set<Integer> hashset,HashMap<Integer, HashMap<String, Integer>> hm){
+        hashset.add(rollinghash);
+        hm.get(rollinghash).put(hash, chunkSize);
+    }
 }
+
+
 
 
