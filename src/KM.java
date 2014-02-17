@@ -29,6 +29,7 @@ public class KM {
 		String backupFile="test.txt";
 		
 		/*
+
 		 * Reading fingerprints into ram
 		 */
 		File file = new File(db);
