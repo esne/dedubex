@@ -257,15 +257,8 @@ public class KM {
 						///winEndPos=winStartPos;
 						jump=true;
 						print("k before jump(else):"+k);
-						continue;						
-						
-						
-				    	
-				    	
-				    	
+						continue;
 				    }
-					
-					
 			    }
 				
 				
@@ -298,7 +291,7 @@ public class KM {
 				}
 				
 				
-				
+
 				
 				if(winEndPos==t.length){
 					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winEndPos);
