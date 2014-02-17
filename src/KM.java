@@ -1,4 +1,3 @@
-
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
@@ -24,8 +23,8 @@ import dedubex.rollinghash.*;
 
 public class KM {
 	//public final static int CHUNK_SIZE=64*1024;
-	public final static int CHUNK_SIZE=15;
-	public final static int WSIZE=9;
+	public final static int CHUNK_SIZE=10;
+	public final static int WSIZE=5;
 	
 	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
 		String db="db.txt";
@@ -48,8 +47,13 @@ public class KM {
 		Set<String> hashsetFULL = new HashSet<String>();
 		//Map <Integer,ChunkHash> hm = new HashMap<Integer,ChunkHash>();
 		HashMap<Integer, HashMap<String, Integer>> hm = new HashMap<Integer, HashMap<String, Integer>>();
-
-		print("initializing hashmap for fasth search");
+		
+		/*
+		 * 
+		 * 			LOAD HASH MAP FROM FILE
+		 * 
+		 */
+		
 		while (dis.available() != 0) {
 			@SuppressWarnings("deprecation")
 			String line = dis.readLine();
@@ -79,23 +83,6 @@ public class KM {
 				
 			}
 		}
-	/*
-	 * 
-	 * HashMap<String, HashMap<String, String>> myArray = new HashMap<String, HashMap<String, String>>();
-
-		if (!myArray.containsKey("en")) {
-    	myArray.put("en", new HashMap<String, String>());
-		}
-		myArray.get("en").put("name", "english name");
-	
-	 */
-		
-		
-		
-        
-
-      //12312:aaaaaaaaaaaaaaaa:32
-		 //  print("get info:"+hm.get(12312).get("aaaaaaaaaaaaaaaa"));
 		
 		
 		fis.close();
@@ -108,25 +95,25 @@ public class KM {
 		
 	    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(db, true)));
 	    
-	    
-		
-		
-	
+
 		
 		/*
-		 * Open file to read data for chunking
+		 * 
+		 * 			READ FILE TO ROLL
+		 * 
 		 */
 		RandomAccessFile f = new RandomAccessFile(backupFile, "r");
 		byte[] t = new byte[(int)f.length()];
 		 f.readFully(t, 0, (int)f.length());
-				
+		
+		 /*
+		  * 
+		  * 		START ROLLING WINDOW METHOD
+		  * 
+		  */
+		 print("txt size:"+t.length);
 		rolling_window(t,0,hashset,hashsetFULL,out,hm);
-		
 
-		
-		/* end rolling window */
-		
-		
 		f.close(); /* close file */
 		out.close();
 
@@ -136,14 +123,13 @@ public class KM {
  
 
 		RabinKarpHash ch = new RabinKarpHash(WSIZE);
-		RabinKarpHash ch1 = new RabinKarpHash(WSIZE);
+
 
 
 		 /*
 		  * Read first n bytes from file and to get first fingerprint
 		  */
-		 int k = startPos;								//start position
-		 int j = 0;										
+		 int k = startPos;								//start position									
 		 int rollinghash=0;
 		 int chunkStartPos=startPos;
 		 int chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
@@ -153,7 +139,6 @@ public class KM {
 	     String chunkHash="";
 	     int chunkSize=0;
 	     
-	     boolean setRolling=false;
 		 // INITIAL FINGERPRINT   FILL ROLLING WINDOW
 
 				
@@ -162,10 +147,10 @@ public class KM {
 	   
 	     boolean jump=false;
 	     boolean match=false;
-	     boolean init=false;
+	 //    boolean init=false;
 	     long st1 = System.nanoTime(); // start time
-	     int hops=0;
 		 for(;k<t.length+1;++k) {
+			//if(k>t.length+1 ) break;
 			if(jump){
 				//print("k after jump:"+k);
 				ch=null;
@@ -173,12 +158,15 @@ public class KM {
 				jump=false;
 			}
 			winEndPos=k;
+			
 			if(winEndPos-winStartPos<WSIZE) {
-				winStartPos=chunkStartPos;		
+				if(k>=t.length) break;
+				winStartPos=chunkStartPos;	
+				print("k:"+k);
 				rollinghash=ch.eat2(t[k]);
 				if((winEndPos-winStartPos)==WSIZE-1){
-					//print("initialized hash:"+rollinghash);
-					init=true;
+					print("initialized hash:"+rollinghash);
+				///	init=true;
 					//print("Content after initialiaz:"+ new String(Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1)));
 					}
 				continue;
@@ -186,11 +174,16 @@ public class KM {
 
 			if (hashset.contains(rollinghash)){
 				
-				//load hashes
+				/*
+				 * 
+				 * 			CHECK IF WE HAVE VALID HASH FOR ROLLING WINDOW
+				 * 
+				 */
 				HashMap<String,Integer> hmcheck=hsdb.get(rollinghash);
  
 			          for (Iterator<Entry<String, Integer>> it2 = hmcheck.entrySet().iterator(); it2.hasNext();) {  
-			              Map.Entry entry2 = (Map.Entry) it2.next();  
+			              @SuppressWarnings("rawtypes")
+						Map.Entry entry2 = (Map.Entry) it2.next();  
 			              String hash = (String)entry2.getKey();
 			        	  chunkSize=Integer.parseInt(entry2.getValue().toString());
 			        	  
@@ -219,10 +212,15 @@ public class KM {
 				
 				
 				
-				// we have hash
+				
 			    if(match){
 			    	
-			    
+			    /*
+			     * 
+			     * 		WE HAVE HAVE MATCH
+			     *
+			     */
+			    	print("k  match:"+k);
 					if(winStartPos==chunkStartPos){
 						//print("winStartPos==chunkStartPos");
 						chunkStartPosFingerprint=rollinghash;	
@@ -235,18 +233,40 @@ public class KM {
 						//print("We have match at pos:"+chunkStartPos+" fingerprint:"+chunkStartPosFingerprint+" chunk hash:"+chunkHash);
 								//print("k first value:"+k);
 								rollinghash=0;
-								k=chunkEndPos;
-								chunkStartPos=chunkEndPos+1;
+								k=winStartPos+chunkSize-1;
+								chunkStartPos=winStartPos+chunkSize;
 								chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
 								winStartPos=chunkStartPos;
 								winEndPos=winStartPos;
+								
 								jump=true;
-								//print("k before jump:"+k);
+								print("k before jump:"+k);
 								continue;
 								
 							//}
 					}else{
-				    	print("------------------------no start");
+						
+						byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winStartPos-1);
+						int lchunkSize=winStartPos-1-chunkStartPos;
+						chunkHash=md5Hash(chunk);		
+						print(chunkStartPosFingerprint+":"+chunkHash+":"+lchunkSize);
+						out.println(chunkStartPosFingerprint+":"+chunkHash+":"+lchunkSize);
+						
+						rollinghash=0;
+						//k=chunkEndPos;
+						k=winStartPos+chunkSize-1;
+						chunkStartPos=winStartPos+chunkSize;
+						chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+						winStartPos=chunkStartPos;
+						winEndPos=winStartPos;
+						jump=true;
+						print("k before jump(else):"+k);
+						continue;						
+						
+						
+				    	
+				    	
+				    	
 				    }
 					
 					
@@ -272,9 +292,22 @@ public class KM {
 					////print("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
 
 					chunkStartPos=chunkEndPos+1;					
-					chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
-				}
+					
+					int tillEnd=t.length - (chunkStartPos+CHUNK_SIZE);
+					if(tillEnd < WSIZE){
 
+						chunkEndPos=chunkStartPos+CHUNK_SIZE-1+tillEnd;
+					}else{
+						chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+					}
+					
+					
+					
+				}
+				
+				
+				
+				
 				if(winEndPos==t.length){
 					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winEndPos);
 					chunkHash=md5Hash(chunk);
