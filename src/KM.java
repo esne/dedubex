@@ -1,12 +1,4 @@
-import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,102 +15,108 @@ public class KM {
 	//public final static int CHUNK_SIZE=64*1024;
 	private final static int CHUNK_SIZE=10;
 	private final static int WSIZE=5;
-	
-	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
-		String db="db.txt";
-		String backupFile="test.txt";
-		
+
+    File file;
+    FileInputStream fis;
+    BufferedInputStream bis;
+    DataInputStream dis;
+    private Set<Integer> hashset;
+    private HashMap<Integer, HashMap<String, Integer>> hm;
+    byte[] data;
+
+    public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
+
+        KM km = new KM();
+        km.init();
+
+
+	}
+
+    public void init() throws IOException, NoSuchAlgorithmException {
+        String db="db.txt";
+        String backupFile="test.txt";
+
 		/*
 		 * Reading fingerprints into ram
 		 */
 
 
-		File file = new File(db);
-		FileInputStream fis;
-		BufferedInputStream bis;
-		DataInputStream dis;
-		
-		
-		fis = new FileInputStream(file);		 
-		bis = new BufferedInputStream(fis);
-		dis = new DataInputStream(bis);
-		
-		Set<Integer> hashset = new HashSet<Integer>();
-		//Set<String> hashsetFULL = new HashSet<String>();
-		//Map <Integer,ChunkHash> hm = new HashMap<Integer,ChunkHash>();
-		HashMap<Integer, HashMap<String, Integer>> hm = new HashMap<Integer, HashMap<String, Integer>>();
-		
+        file = new File(db);
+        fis = new FileInputStream(file);
+        bis = new BufferedInputStream(fis);
+        dis = new DataInputStream(bis);
+        hashset = new HashSet<Integer>();
+        hm= new HashMap<Integer, HashMap<String, Integer>>();
+
 		/*
-		 * 
+		 *
 		 * 			LOAD HASH MAP FROM FILE
 		 *
 		  *
 		 */
-		
-		while (dis.available() != 0) {
-			@SuppressWarnings("deprecation")
-			String line = dis.readLine();
-			String[] parts = line.split(":");
-			if(!parts[0].isEmpty()){
-				hashset.add(Integer.parseInt(parts[0]));
-				if (!hm.containsKey(Integer.parseInt(parts[0]))) {
-			    	hm.put(Integer.parseInt(parts[0]), new HashMap<String, Integer>());
-					}
-					int hashSize;
-                    hashSize = Integer.parseInt(parts[2]);
+
+        while (dis.available() != 0) {
+            @SuppressWarnings("deprecation")
+            String line = dis.readLine();
+            String[] parts = line.split(":");
+            if(!parts[0].isEmpty()){
+                hashset.add(Integer.parseInt(parts[0]));
+                if (!hm.containsKey(Integer.parseInt(parts[0]))) {
+                    hm.put(Integer.parseInt(parts[0]), new HashMap<String, Integer>());
+                }
+                int hashSize;
+                hashSize = Integer.parseInt(parts[2]);
 
                 if(hm.get(Integer.parseInt(parts[0])).containsKey(parts[1]) ){
-						
-						
-							if(hm.get(Integer.parseInt(parts[0])).get(parts[1]) != hashSize){
-								//print("add to HM2 key:"+parts[0]+" hash:"+parts[1]+" size:"+parts[2]);
-								hm.get(Integer.parseInt(parts[0])).put(parts[1], hashSize);
-							}
-							
-					}else{
-						hm.get(Integer.parseInt(parts[0])).put(parts[1], hashSize);
-						//print("add to HM key:"+parts[0]+" hash:"+parts[1]+" size:"+parts[2]);
-					}
-				
-			}
-		}
-		
 
-		fis.close();
-		bis.close();
-		dis.close();
-	
+
+                    if(hm.get(Integer.parseInt(parts[0])).get(parts[1]) != hashSize){
+                        //print("add to HM2 key:"+parts[0]+" hash:"+parts[1]+" size:"+parts[2]);
+                        hm.get(Integer.parseInt(parts[0])).put(parts[1], hashSize);
+                    }
+
+                }else{
+                    hm.get(Integer.parseInt(parts[0])).put(parts[1], hashSize);
+                    //print("add to HM key:"+parts[0]+" hash:"+parts[1]+" size:"+parts[2]);
+                }
+
+            }
+        }
+
+
+        fis.close();
+        bis.close();
+        dis.close();
+
 		/*
 		 * Open file to write fingerprint:hash
 		 */
-		
-	    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(db, true)));
-	    
 
-		
+        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(db, true)));
+
+
+
 		/*
-		 * 
+		 *
 		 * 			READ FILE TO ROLL
-		 * 
+		 *
 		 */
-		RandomAccessFile f = new RandomAccessFile(backupFile, "r");
-		byte[] t = new byte[(int)f.length()];
-		 f.readFully(t, 0, (int)f.length());
-		
+        RandomAccessFile f = new RandomAccessFile(backupFile, "r");
+        data = new byte[(int)f.length()];
+        f.readFully(data, 0, (int)f.length());
+
 		 /*
-		  * 
+		  *
 		  * 		START ROLLING WINDOW METHOD
-		  * 
+		  *
 		  */
-		 print("txt size:"+t.length);
-		rolling_window(t, hashset, out,hm);
+        print("txt size:"+data.length);
+        rolling_window(data, hashset, out,hm);
 
-		f.close(); /* close file */
-		out.close();
-
-	}
-	
-	private static void rolling_window(byte[] t, Set<Integer> hashset, PrintWriter out, HashMap<Integer, HashMap<String, Integer>> hsdb) throws NoSuchAlgorithmException{
+        f.close(); /* close file */
+        out.close();
+    }
+	private  void rolling_window(byte[] data, Set<Integer> hashset, PrintWriter out, HashMap<Integer, HashMap<String, Integer>> hsdb) throws NoSuchAlgorithmException{
  
 
 		RabinKarpHash ch = new RabinKarpHash(WSIZE);
@@ -147,7 +145,7 @@ public class KM {
 	     boolean match=false;
 	 //    boolean init=false;
 	     long st1 = System.nanoTime(); // start time
-		 for(;k<t.length+1;++k) {
+		 for(;k<data.length+1;++k) {
 			//if(k>t.length+1 ) break;
 			if(jump){
 				//print("k after jump:"+k);
@@ -158,10 +156,10 @@ public class KM {
 			winEndPos=k;
 			
 			if(winEndPos-winStartPos<WSIZE) {
-				if(k>=t.length) break;
+				if(k>=data.length) break;
 				winStartPos=chunkStartPos;	
 				print("k:"+k);
-				rollinghash=ch.eat2(t[k]);
+				rollinghash=ch.eat2(data[k]);
 				if((winEndPos-winStartPos)==WSIZE-1){
 					print("initialized hash:"+rollinghash);
 				///	init=true;
@@ -186,7 +184,7 @@ public class KM {
                     chunkSize = Integer.parseInt(entry2.getValue().toString());
 
 
-                    byte[] chunk = Arrays.copyOfRange(t, winStartPos, winStartPos + chunkSize);
+                    byte[] chunk = Arrays.copyOfRange(data, winStartPos, winStartPos + chunkSize);
                     chunkHash = md5Hash(chunk);
 
                     if (hash.endsWith(chunkHash)) {
@@ -242,12 +240,13 @@ public class KM {
 							//}
 					}else{
 						
-						byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winStartPos-1);
+						byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winStartPos-1);
 						int localChunkSize=winStartPos-1-chunkStartPos;
 						chunkHash=md5Hash(chunk);		
 						print(chunkStartPosFingerprint+":"+chunkHash+":"+localChunkSize);
 						out.println(chunkStartPosFingerprint+":"+chunkHash+":"+localChunkSize);
-						
+                        addToHashMap(chunkStartPosFingerprint,chunkHash,localChunkSize);
+
 						rollinghash=0;
 						//k=chunkEndPos;
 						k=winStartPos+chunkSize-1;
@@ -271,14 +270,15 @@ public class KM {
 				}
 				
 				if(winStartPos == chunkEndPos){
-					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1);
+					byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,chunkEndPos+1);
 					chunkHash=md5Hash(chunk);					
 					out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+                    addToHashMap(chunkStartPosFingerprint,chunkHash,(chunkEndPos-chunkStartPos+1));
 					////print("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
 
 					chunkStartPos=chunkEndPos+1;					
 					
-					int tillEnd=t.length - (chunkStartPos+CHUNK_SIZE);
+					int tillEnd=data.length - (chunkStartPos+CHUNK_SIZE);
 					if(tillEnd < WSIZE){
 
 						chunkEndPos=chunkStartPos+CHUNK_SIZE-1+tillEnd;
@@ -293,11 +293,11 @@ public class KM {
 				
 
 				
-				if(winEndPos==t.length){
-					byte[] chunk = Arrays.copyOfRange(t, chunkStartPos,winEndPos);
+				if(winEndPos==data.length){
+					byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winEndPos);
 					chunkHash=md5Hash(chunk);
 					out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(winEndPos-chunkStartPos));
-                    
+                    addToHashMap(chunkStartPosFingerprint,chunkHash,(winEndPos-chunkStartPos));
 					////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
 					break;
 				}
@@ -312,9 +312,9 @@ public class KM {
 
 
 			// Generate rolling window has for next iteration
-			if(k>=t.length)break;
+			if(k>=data.length)break;
 			winStartPos=k-WSIZE;
-			rollinghash = ch.update2(t[winStartPos],t[winEndPos]);
+			rollinghash = ch.update2(data[winStartPos],data[winEndPos]);
 			winStartPos=k-WSIZE+1;
 		}
 		long et1 = System.nanoTime() - st1; // end time
@@ -342,9 +342,15 @@ public class KM {
 	private static void print(String txt){
 		System.out.println(txt);
 	}
-    private void addToHashMap(int rollinghash,String hash,int chunkSize, Set<Integer> hashset,HashMap<Integer, HashMap<String, Integer>> hm){
+    private void addToHashMap(int rollinghash,String hash,int chunkSize){
+        if (!hm.containsKey(rollinghash)) {
+            hm.put(rollinghash, new HashMap<String, Integer>());
+        }
         hashset.add(rollinghash);
         hm.get(rollinghash).put(hash, chunkSize);
+    }
+    private void printHashMap(){
+        //
     }
 }
 
