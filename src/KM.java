@@ -145,15 +145,16 @@ public class KM {
         boolean jump=false;
         boolean match=false;
         long st1 = System.nanoTime(); // start time
-        for(;k<data.length+1;++k) {
+        for(;k<data.length;++k) {
             //if(k>t.length+1 ) break;
+            winEndPos=k;
             if(jump){
                 log.debug("Landing from jump, position k:"+k);
                 //ch=null;
                 ch=new RabinKarpHash(WSIZE);
                 jump=false;
             }
-            winEndPos=k;
+
 
             if(winEndPos-winStartPos<WSIZE) {
                 if(k>=data.length) break;
@@ -163,10 +164,15 @@ public class KM {
                     log.debug("Rollinghash initialized:" + rollinghash+ " ("+winStartPos+","+winEndPos+")");
                     ///	init=true;
                     //print("Content after initialiaz:"+ new String(Arrays.copyOfRange(t, chunkStartPos,chunkEndPos+1)));
+                }else{
+                    continue;
                 }
-                continue;
+            }else{
+                winStartPos=k-WSIZE+1;
+                rollinghash = ch.update2(data[winStartPos],data[winEndPos]);
             }
 
+            log.debug("rollingwindows:("+winStartPos+","+winEndPos+") rh:"+rollinghash);
             if (hashset.contains(rollinghash)){
                 log.debug("Found rollinghash:"+rollinghash);
 				/*
@@ -207,7 +213,7 @@ public class KM {
 
 
                 if(match){
-			    	
+			    	match=false;
 			    /*
 			     * 
 			     * 		WE HAVE HAVE MATCH
@@ -268,16 +274,15 @@ public class KM {
                 log.debug("No match. position:("+winStartPos+","+winEndPos+")");
                 if(winStartPos == chunkStartPos ){
                     log.debug("No match. New block. Set rollinghash at start of block:"+rollinghash);
-                chunkStartPosFingerprint=rollinghash;
-            }
+                    chunkStartPosFingerprint=rollinghash;
+                }
 
             if(winStartPos == chunkEndPos){
                 byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,chunkEndPos+1);
                 chunkHash=md5Hash(chunk);
                 out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
                 addToHashMap(chunkStartPosFingerprint,chunkHash,(chunkEndPos-chunkStartPos+1));
-                log.debug("No match. New block position:"+k+" rollinghash:"+rollinghash+" chunkHash:"+chunkHash+"");
-                log.debug("No match. Write new block to file. write to hashMap");
+                log.debug("No match. End of boundary. Saving rollinghash:"+rollinghash+" chunkHash:"+chunkHash+"");
                 ////print("Writing:cs="+chunkStartPos+" ce:"+(chunkEndPos+1)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
 
                 chunkStartPos=chunkEndPos+1;
@@ -300,26 +305,31 @@ public class KM {
 
 
 
-            if(winEndPos==data.length){
 
-                byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winEndPos);
+
+
+        }
+            if(winEndPos==data.length-1){
+
+                byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winEndPos+1);
                 chunkHash=md5Hash(chunk);
-                out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(winEndPos-chunkStartPos));
-                addToHashMap(chunkStartPosFingerprint,chunkHash,(winEndPos-chunkStartPos));
+                out.println(chunkStartPosFingerprint+":"+chunkHash+":"+((winEndPos+1)-chunkStartPos));
+                addToHashMap(chunkStartPosFingerprint,chunkHash,((winEndPos+1)-chunkStartPos));
                 ////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
                 log.debug("Final byte of file. Writing chunk info to db. rollinghash of start of block:"+rollinghash+" chunkHash:"+chunkHash);
                 break;
             }
 
-
-        }
-
-
         // Generate rolling window has for next iteration
+
+
         if(k>=data.length)break;
+      /* End modified
         winStartPos=k-WSIZE;
         rollinghash = ch.update2(data[winStartPos],data[winEndPos]);
         winStartPos=k-WSIZE+1;
+       */
+
     }
     long et1 = System.nanoTime() - st1; // end time
     log.debug("Estimated time:" + (float) et1 / 1000000000);
