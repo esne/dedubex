@@ -13,14 +13,16 @@ import dedubex.rollinghash.*;
 
 
 public class KM {
-    //public final static int CHUNK_SIZE=64*1024;
-    private final static int CHUNK_SIZE=10;
-    private final static int WSIZE=5;
+    public final static int CHUNK_SIZE=1024*1024;
+    //private final static int CHUNK_SIZE=10;
+    private final static int WSIZE=48;
     private static final Logger log = Logger.getLogger(
             KM.class.getName());
     private Set<Integer> hashset;
     private HashMap<Integer, HashMap<String, Integer>> hm;
     private Chunk chunk = new Chunk();
+    long hashTime =0;
+    long checkHashTime=0;
 
     public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
         KM km = new KM();
@@ -32,7 +34,7 @@ public class KM {
     void init() throws IOException, NoSuchAlgorithmException {
         log.info("----------------- STARTING APP -------------------");
         String db="db.txt";
-        String backupFile="test.txt";
+        String backupFile="playboy.pdf";
 
 
 		/*
@@ -124,7 +126,7 @@ public class KM {
 
         RabinKarpHash ch = new RabinKarpHash(WSIZE);
         int k = 0;
-        int rollinghash=0;
+        int rollinghash;
         int chunkStartPos= 0;
         int chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
         int winStartPos=0;
@@ -137,12 +139,12 @@ public class KM {
         long st1 = System.nanoTime(); // start time
          // Main loop
         for(;k<data.length;++k) {
+            log.debug("---------------------------------------------");
             //if(k>t.length+1 ) break;
             winEndPos=k;
             // Jump from existing block. This is right after block.
             if(jump){
                 log.debug("Landing from jump, position k:"+k);
-                //ch=null;
                 ch=new RabinKarpHash(WSIZE);
                 jump=false;
             }
@@ -151,8 +153,9 @@ public class KM {
             if(winEndPos-winStartPos<WSIZE) {
                 //if(k>=data.length) break;
                 winStartPos=chunkStartPos;
-                rollinghash=ch.eat2(data[k]);
 
+                rollinghash=ch.eat2(data[k]);
+                log.debug("symbol add:"+data[k]+" rollinghash:"+rollinghash);
                 //End of file. Write remaining to file
                 if(winEndPos==data.length-1){
 
@@ -161,17 +164,18 @@ public class KM {
 
                     //if chunk nothing else write to disk
 
-                 //   if(checkHashTable(data,winStartPos,rollinghash)){
-                  //      chunkHash=this.chunk.hash;
-                  //      chunkSize=this.chunk.chunkSize;
-                  //      log.debug("LAST bit. rh:"+rollinghash+" hash:"+chunkHash+" chunkSize:"+chunkSize);
-                 //   }
-
-                    out.println(rollinghash+":"+chunkHash+":"+((winEndPos+1)-chunkStartPos));
-                    addToHashMap(rollinghash,chunkHash,((winEndPos+1)-chunkStartPos));
-                    ////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
-                    log.debug("Incompleate rollinghash. End of File:"+rollinghash+" chunkHash:"+chunkHash);
-                    break;
+                    if(checkHashTable(data,winStartPos,rollinghash)){
+                        chunkHash=this.chunk.hash;
+                        chunkSize=this.chunk.chunkSize;
+                        log.debug("LAST bit. rh:"+rollinghash+" hash:"+chunkHash+" chunkSize:"+chunkSize);
+                        break;
+                    }else{
+                        out.println(rollinghash+":"+chunkHash+":"+((winEndPos+1)-chunkStartPos));
+                        addToHashMap(rollinghash,chunkHash,((winEndPos+1)-chunkStartPos));
+                        ////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
+                        log.debug("Incompleate rollinghash. End of File:"+rollinghash+" chunkHash:"+chunkHash);
+                        break;
+                    }
                 }
 
 
@@ -187,7 +191,8 @@ public class KM {
             }else{
                 //Rolling window reached its size
                 winStartPos=k-WSIZE+1;
-                rollinghash = ch.update2(data[winStartPos],data[winEndPos]);
+                log.debug("remove:"+data[winStartPos]+" add:"+data[winEndPos]);
+                rollinghash = ch.update2(data[winStartPos-1],data[winEndPos]);
             }
 
 
@@ -199,52 +204,24 @@ public class KM {
                 out.println(chunkStartPosFingerprint+":"+chunkHash+":"+((winEndPos+1)-chunkStartPos));
                 addToHashMap(chunkStartPosFingerprint,chunkHash,((winEndPos+1)-chunkStartPos));
                 ////print("------Writing:cs="+chunkStartPos+" ce:"+(winEndPos)+" f:"+chunkStartPosFingerprint+" h:"+chunkHash+" data:"+new String(chunk));
-                log.debug("Final byte of file. Writing chunk info to db. rollinghash of start of block:"+rollinghash+" chunkHash:"+chunkHash);
+                log.debug("Final byte of file. Writing chunk info to db. rollinghash of start of block:"+chunkStartPosFingerprint+" chunkHash:"+chunkHash);
                 break;
             }
 
 
-            log.debug("rollingwindows:("+winStartPos+","+winEndPos+") rh:"+rollinghash);
+            log.debug("Before check. rollingwindows:("+winStartPos+","+winEndPos+") rh:"+rollinghash);
 
 
             // Check if we have rolling window in hashset
             if (hashset.contains(rollinghash)){
                 log.debug("Found rollinghash:"+rollinghash);
-
-                /*
-                HashMap<String,Integer> hmcheck=this.hm.get(rollinghash);
-
-                for (Entry<String, Integer> stringIntegerEntry : hmcheck.entrySet()) {
-                    @SuppressWarnings("rawtypes")
-                    Entry entry2 = (Entry) stringIntegerEntry;
-                    String hash = (String) entry2.getKey();
-                    chunkSize = Integer.parseInt(entry2.getValue().toString());
-
-
-                    byte[] chunk = Arrays.copyOfRange(data, winStartPos, winStartPos + chunkSize);
-                    chunkHash = md5Hash(chunk);
-
-                    if (hash.endsWith(chunkHash)) {
-                        //print("CHUNKSIIIIZE:"+chunkSize+" startpos:"+winStartPos+" hash:"+chunkHash+" db hash:"+hash);
-
-
-                        //TODO: do jump as we have chunk size to jump forward. before jump we need to create chunk and add to database.
-
-                        match = true;
-
-                        break;
-                    }
-
-                }
-                */
-
                 match=checkHashTable(data,winStartPos,rollinghash);
                 chunkHash=chunk.hash;
                 chunkSize=chunk.chunkSize;
 
 
 
-
+                // We have rollinghash and hash match
                 if(match){
 			    	match=false;
 			    /*
@@ -254,6 +231,7 @@ public class KM {
 			     */
                     if(chunkHash.isEmpty()) log.error("Match! chunkHash not initialized");
                     log.debug("Match! rollinghash:"+rollinghash+" chunkHash:"+chunkHash+" k:" + k);
+                    //jump if we have start
                     if(winStartPos==chunkStartPos){
                         log.debug("Match! START of block. position:"+k+" rollinghash:"+rollinghash);
                         chunkStartPosFingerprint=rollinghash;
@@ -267,9 +245,10 @@ public class KM {
 
 
                     }else{
+                        //Jump from MIddle
                         log.debug("Match! Block MIDDLE. position:"+k+" rollinghash"+rollinghash);
-                        byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winStartPos-1);
-                        int localChunkSize=winStartPos-1-chunkStartPos;
+                        byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,winStartPos);
+                        int localChunkSize=winStartPos-chunkStartPos;
                         chunkHash=md5Hash(chunk);
                         log.debug(chunkStartPosFingerprint + ":" + chunkHash + ":" + localChunkSize);
                         out.println(chunkStartPosFingerprint+":"+chunkHash+":"+localChunkSize);
@@ -284,50 +263,47 @@ public class KM {
                     }
                 }
 
-
+                if(winStartPos == chunkStartPos ){
+                    log.debug("No match. winStartPos == chunkStartPos. Set rollinghash at start of block:"+rollinghash);
+                    chunkStartPosFingerprint=rollinghash;
+                }
 
 
             }else{
+                // NO match for rollinghash and hash
                 log.debug("No match. position:("+winStartPos+","+winEndPos+")");
                 if(winStartPos == chunkStartPos ){
                     log.debug("No match. winStartPos == chunkStartPos. Set rollinghash at start of block:"+rollinghash);
                     chunkStartPosFingerprint=rollinghash;
                 }
 
-            if(winStartPos == chunkEndPos){
-                byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,chunkEndPos+1);
-                chunkHash=md5Hash(chunk);
-                out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
-                addToHashMap(chunkStartPosFingerprint,chunkHash,(chunkEndPos-chunkStartPos+1));
-                log.debug("No match. End of boundary. Saving rollinghash:"+rollinghash+" chunkHash:"+chunkHash+"");
-                chunkStartPos=chunkEndPos+1;
+                if(winStartPos == chunkEndPos){
+                    byte[] chunk = Arrays.copyOfRange(data, chunkStartPos,chunkEndPos+1);
+                    chunkHash=md5Hash(chunk);
+                    out.println(chunkStartPosFingerprint+":"+chunkHash+":"+(chunkEndPos-chunkStartPos+1));
+                    addToHashMap(chunkStartPosFingerprint,chunkHash,(chunkEndPos-chunkStartPos+1));
+                    log.debug("No match. End of boundary. Saving rollinghash:"+rollinghash+" chunkHash:"+chunkHash+"");
+                    chunkStartPos=chunkEndPos+1;
 
 
-               /*
-               int tillEnd=data.length - (chunkStartPos+CHUNK_SIZE);
-                if(tillEnd < WSIZE){
+                   /*
+                   int tillEnd=data.length - (chunkStartPos+CHUNK_SIZE);
+                    if(tillEnd < WSIZE){
 
-                    chunkEndPos=chunkStartPos+CHUNK_SIZE-1+tillEnd;
-                    log.debug("No match! end of file adding EXTRA to make chunkEndPos:"+chunkEndPos);
-                }else{
+                        chunkEndPos=chunkStartPos+CHUNK_SIZE-1+tillEnd;
+                        log.debug("No match! end of file adding EXTRA to make chunkEndPos:"+chunkEndPos);
+                    }else{
 
+                        chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
+                        log.debug("No match! define chunkEndPos:"+chunkEndPos);
+                    }
+                    */
                     chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
                     log.debug("No match! define chunkEndPos:"+chunkEndPos);
+
+
                 }
-                */
-                chunkEndPos=chunkStartPos+CHUNK_SIZE-1;
-                log.debug("No match! define chunkEndPos:"+chunkEndPos);
-
-
             }
-
-
-
-
-
-
-
-        }
             /*
             if(winEndPos==data.length-1){
 
@@ -344,27 +320,38 @@ public class KM {
         // Generate rolling window has for next iteration
 
 
-        if(k>=data.length)break;
+       // if(k>=data.length)break;
       /* End modified
         winStartPos=k-WSIZE;
         rollinghash = ch.update2(data[winStartPos],data[winEndPos]);
         winStartPos=k-WSIZE+1;
        */
 
+        }
+        long et1 = System.nanoTime() - st1; // end time
+        log.info("Estimated time:" + (float) et1 / 1000000000);
+        log.info("MD5 hashtime time:" + (float) this.hashTime / 1000000000);
+
+
+
     }
-    long et1 = System.nanoTime() - st1; // end time
-    log.debug("Estimated time:" + (float) et1 / 1000000000);
 
 
-}
+    private  String  md5Hash(byte[] data) throws NoSuchAlgorithmException{
+
+        return "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    }
 
 
+    private  String  md5Hash1(byte[] data) throws NoSuchAlgorithmException{
 
 
+        MessageDigest md = MessageDigest.getInstance("SHA-512");
+        long ht2 = System.nanoTime();
 
-    private static String  md5Hash(byte[] data) throws NoSuchAlgorithmException{
-        MessageDigest md = MessageDigest.getInstance("MD5");
         return toHex(md.digest(data));
+
+
         //
     }
 
@@ -385,32 +372,30 @@ public class KM {
 
     private boolean checkHashTable(byte[] data,int winStartPos,int rollinghash) throws NoSuchAlgorithmException {
         boolean match=false;
-        int chunkSize=0;
-        String chunkHash="";
+        int chunkSize;
+        String chunkHash;
         HashMap<String,Integer> hmcheck=this.hm.get(rollinghash);
-        for (Entry<String, Integer> stringIntegerEntry : hmcheck.entrySet()) {
-            @SuppressWarnings("rawtypes")
-            Entry entry2 = (Entry) stringIntegerEntry;
-            String hash = (String) entry2.getKey();
-            chunkSize = Integer.parseInt(entry2.getValue().toString());
+        if(hmcheck !=null){
+            for (Entry<String, Integer> stringIntegerEntry : hmcheck.entrySet()) {
+                @SuppressWarnings("rawtypes")
+                Entry entry2 = (Entry) stringIntegerEntry;
+                String hash = (String) entry2.getKey();
+                chunkSize = Integer.parseInt(entry2.getValue().toString());
 
 
-            byte[] chunk = Arrays.copyOfRange(data, winStartPos, winStartPos + chunkSize);
-            chunkHash = md5Hash(chunk);
+                byte[] chunk = Arrays.copyOfRange(data, winStartPos, winStartPos + chunkSize);
+                chunkHash = md5Hash(chunk);
 
-            if (hash.endsWith(chunkHash)) {
-                //print("CHUNKSIIIIZE:"+chunkSize+" startpos:"+winStartPos+" hash:"+chunkHash+" db hash:"+hash);
+                if (hash.endsWith(chunkHash)) {
+                    //
+                    this.chunk.hash=chunkHash;
+                    this.chunk.rollinghash=rollinghash;
+                    this.chunk.chunkSize=chunkSize;
+                    match = true;
 
-
-                //TODO: do jump as we have chunk size to jump forward. before jump we need to create chunk and add to database.
-                this.chunk.hash=chunkHash;
-                this.chunk.rollinghash=rollinghash;
-                this.chunk.chunkSize=chunkSize;
-                match = true;
-
-                break;
+                    break;
+                }
             }
-
         }
         return match;
     }
